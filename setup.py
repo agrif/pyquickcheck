@@ -12,5 +12,5 @@ setup(name='pyquickcheck',
       author_email='aargri@gmail.com',
       url='http://github.com/agrif/pyquickcheck',
       license='MIT',
-      py_modules=['quickcheck'],
+      packages=['quickcheck'],
 )
