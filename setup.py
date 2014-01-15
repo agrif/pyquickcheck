@@ -46,5 +46,6 @@ setup(name='pyquickcheck',
       url='http://github.com/agrif/pyquickcheck',
       license='MIT',
       packages=find_packages(),
+      test_suite='quickcheck.tests',
       setup_requires = ['setuptools_git >= 0.3'],
 )

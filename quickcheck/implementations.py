@@ -3,6 +3,8 @@
 from .interface import arbitrary, shrink
 from .decorator import decorator
 
+import random
+
 __all__ = ['roundrobin', 'shrink_sequence']
 
 def roundrobin(*iterables):
@@ -78,6 +80,9 @@ class Float(ArbitrarySpec):
         self.max = max
         self.add_sign = add_sign
         self.distribution = distribution
+        
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("specified min is greater than specified max")
     
     def arbitrary(self, size=0xffff):
         mult = size
@@ -241,37 +246,6 @@ def arbitrary_bytes(_):
 @shrink.register(bytes)
 def shrink_bytes(v):
     return shrink_sequence(v)
-
-class QuickCheckError(Exception):
-    pass
-
-def _quickcheck_minimize(f, args, kwargs, used, exctype):
-    """Given a function f, arguments to that function, and a set of
-    quickcheck-produced values, attempt to minimize those values while
-    preserving the exception type generated.
-    """
-    
-    def arg_shrinks(arg):
-        v = used[arg]
-        for x in shrink(v):
-            yield (arg, x)
-    
-    while True:
-        for name, v in roundrobin(*(arg_shrinks(name) for name in used)):
-            kwargs_new = kwargs.copy()
-            kwargs_new.update(used)
-            kwargs_new[name] = v
-            try:
-                f(*args, **kwargs_new)
-            except exctype:
-                # successful minimization!
-                used[name] = v
-                break
-        else:
-            # we never minimized anything, so
-            break
-    
-    return used
 
 # make sure we export all ArbitrarySpec subclasses
 for name, val in list(locals().items()):
