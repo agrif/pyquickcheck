@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-try:
-    from setuptools.core import setup
-except ImportError:
-    from distutils.core import setup
+from ez_setup import use_setuptools
+use_setuptools()
+
+from setuptools import setup, find_packages
 
 setup(name='pyquickcheck',
       version='0.0.0',
@@ -12,5 +12,6 @@ setup(name='pyquickcheck',
       author_email='aargri@gmail.com',
       url='http://github.com/agrif/pyquickcheck',
       license='MIT',
-      packages=['quickcheck'],
+      packages=find_packages(),
+      setup_requires = ['setuptools_git >= 0.3'],
 )
