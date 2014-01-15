@@ -1,6 +1,7 @@
 """Decorator for properties that will check them when called."""
 
 from .decorator import decorator
+from .roundrobin import roundrobin
 from .interface import arbitrary, shrink
 
 __all__ = ['QuickCheckError', 'quickcheck']

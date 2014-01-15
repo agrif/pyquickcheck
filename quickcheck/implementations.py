@@ -2,23 +2,11 @@
 
 from .interface import arbitrary, shrink
 from .decorator import decorator
+from .roundrobin import roundrobin
 
 import random
 
-__all__ = ['roundrobin', 'shrink_sequence']
-
-def roundrobin(*iterables):
-    "roundrobin('ABC', 'D', 'EF') --> A D E B F C"
-    # Recipe credited to George Sakkis
-    pending = len(iterables)
-    nexts = itertools.cycle(iter(it).__next__ for it in iterables)
-    while pending:
-        try:
-            for next in nexts:
-                yield next()
-        except StopIteration:
-            pending -= 1
-            nexts = itertools.cycle(itertools.islice(nexts, pending))
+__all__ = ['shrink_sequence']
 
 def shrink_sequence(v, factory=None):
     """Yields 1-element smaller subsequences, and subsequences where 1
@@ -73,6 +61,13 @@ class Constant(ArbitrarySpec):
     
     def arbitrary(self):
         return self.v
+
+class Choice(ArbitrarySpec):
+    def __init__(self, first, *values):
+        self.values = [first] + list(values)
+    
+    def arbitrary(self):
+        return random.choice(self.values)
 
 class Float(ArbitrarySpec):
     def __init__(self, min=None, max=None, add_sign=True, distribution=lambda: random.random()):
@@ -166,7 +161,7 @@ def shrink_int(v):
 
 @arbitrary.register(bool)
 def arbitrary_bool(_):
-    return random.choice([True, False])
+    return arbitrary(Choice(True, False))
 
 @shrink.register(bool)
 def shrink_bool(v):
