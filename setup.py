@@ -1,11 +1,17 @@
 #!/usr/bin/env python
 
+# since this may be run under py2
+from __future__ import print_function
+
+import sys
+if sys.hexversion < 0x03020000:
+    raise RuntimeError('This package requires Python 3.2 or later.')
+
 from ez_setup import use_setuptools
 use_setuptools()
 
 from setuptools import setup, find_packages
 from subprocess import Popen, PIPE
-import sys
 import os
 
 def find_version():
@@ -35,17 +41,18 @@ def find_version():
     print("warning: git version or PKG-INFO file not found. version will be wrong!", file=sys.stderr)
     return "0.0-unknown"
 
-# force this to run in the right directory
-os.chdir(os.path.abspath(os.path.split(__file__)[0]))
-
-setup(name='pyquickcheck',
-      version=find_version(),
-      description='a Python port of QuickCheck',
-      author='Aaron Griffith',
-      author_email='aargri@gmail.com',
-      url='http://github.com/agrif/pyquickcheck',
-      license='MIT',
-      packages=find_packages(),
-      test_suite='quickcheck.tests',
-      setup_requires = ['setuptools_git >= 0.3'],
-)
+if __name__ == '__main__':
+    # force this to run in the right directory
+    os.chdir(os.path.abspath(os.path.split(__file__)[0]))
+    
+    setup(name='pyquickcheck',
+          version=find_version(),
+          description='a Python port of QuickCheck',
+          author='Aaron Griffith',
+          author_email='aargri@gmail.com',
+          url='http://github.com/agrif/pyquickcheck',
+          license='MIT',
+          packages=find_packages(),
+          test_suite='quickcheck.tests',
+          setup_requires = ['setuptools_git >= 0.3'],
+    )
