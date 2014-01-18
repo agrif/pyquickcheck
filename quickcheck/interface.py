@@ -5,25 +5,37 @@ from .generic import generic
 import threading
 import contextlib
 
-__all__ = ['arbitrary', 'shrink']
+__all__ = ['arbitrary', 'shrink', 'sized']
 
 thread_locals = threading.local()
 
 @contextlib.contextmanager
-def set_thread_local(name, val):
+def thread_local(name, val=None):
     """Small context manager to push a value on thread-locals, and pop
     it off when done.
     """
     was_set = hasattr(thread_locals, name)
     old_val = getattr(thread_locals, name, None)
-    setattr(thread_locals, name, val)
+    if val is not None:
+        setattr(thread_locals, name, val)
     try:
-        yield
-    finally:
-        if was_set:
-            setattr(thread_locals, name, old_val)
+        if val is None:
+            yield old_val
         else:
-            delattr(thread_locals, name)
+            yield val
+    finally:
+        if val is not None:
+            if was_set:
+                setattr(thread_locals, name, old_val)
+            else:
+                delattr(thread_locals, name)
+
+def sized(size=None):
+    """A context manager that implicitly sets the size parameter for
+    arbitrary() for all code within its block. Yields the new default
+    value of the size parameter. If given no arguments, or None as a
+    single argument, this simply retrieves the default value."""
+    return thread_local('_quickcheck_arbitrary_size', size)
 
 @generic(issubclass)
 def arbitrary(impl, typ, size=None):
@@ -35,22 +47,15 @@ def arbitrary(impl, typ, size=None):
     if not impl:
         raise NotImplementedError("arbitrary({})".format(typ))
     
-    def impl_with_size():
+    def impl_with_size(effective_size):
         try:
-            return impl(typ, size=size)
+            return impl(typ, size=effective_size)
         except TypeError:
-            return impl(typ)
+            pass
+        return impl(typ)
     
-    SIZE_KEY = '_quickcheck_arbitrary_size'
-    
-    if size is not None:
-        with set_thread_local(SIZE_KEY, size):
-            return impl_with_size()
-    
-    if size is None and hasattr(thread_locals, SIZE_KEY):
-        size = getattr(thread_locals, SIZE_KEY)
-    
-    return impl_with_size()
+    with sized(size) as effective_size:
+        return impl_with_size(effective_size)
 
 @generic(isinstance)
 def shrink(impl, v):

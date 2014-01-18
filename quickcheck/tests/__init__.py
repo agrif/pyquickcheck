@@ -1,13 +1,17 @@
 import quickcheck as qc
 import unittest
 
-@qc.arbitrary.register(qc.ArbitrarySpec)
-def arbitrary_spec(_):
-    specs = [float, int, bool, str, bytes]
-    specs.append(qc.arbitrary(qc.Float))
-    specs.append(qc.arbitrary(qc.Integer))
-    specs.append(qc.Char())
-    return qc.arbitrary(qc.Choice(*specs))
+class LeafSpec(qc.ArbitrarySpec):
+    def __init__(self, simple_only=False):
+        self.simple_only = simple_only
+    
+    def arbitrary(self):
+        specs = [float, int, bool, str, bytes]
+        if not self.simple_only:
+            specs.append(qc.arbitrary(qc.Float))
+            specs.append(qc.arbitrary(qc.Integer))
+            specs.append(qc.Char())
+        return qc.arbitrary(qc.Choice(*specs))        
 
 @qc.arbitrary.register(qc.Float)
 def arbitrary_float_spec(_):
@@ -37,26 +41,56 @@ def arbitrary_int_spec(_):
 
 class TestSpecs(unittest.TestCase):
     @qc.quickcheck()
-    def test_spec(self, spec: qc.ArbitrarySpec):
-        if isinstance(spec, qc.ArbitrarySpec):
-            return False
+    def test_spec(self, spec: LeafSpec(simple_only=True)):
         self.assertIsInstance(qc.arbitrary(spec), spec)
         return True
     
     @qc.quickcheck()
-    def test_constant_spec(self, subspec: qc.ArbitrarySpec):
+    def test_constant_spec(self, subspec: LeafSpec()):
         v = qc.arbitrary(subspec)
         vp = qc.arbitrary(qc.Constant(v))
         self.assertEqual(v, vp)
         return True
     
     @qc.quickcheck()
-    def test_choice_spec(self, subspecs: qc.List(qc.ArbitrarySpec)):
+    def test_choice_spec(self, subspecs: qc.List(LeafSpec())):
         if len(subspecs) == 0:
             return False
         vals = [qc.arbitrary(spec) for spec in subspecs]
         v = qc.arbitrary(qc.Choice(*vals))
         self.assertIn(v, vals)
+        return True
+    
+    @qc.quickcheck()
+    def test_any_spec(self, subspecs: qc.List(LeafSpec(simple_only=True))):
+        if len(subspecs) == 0:
+            return False
+        val = qc.arbitrary(qc.Any(*subspecs))
+        assert any(isinstance(val, t) for t in subspecs)
+        return True
+    
+    @qc.quickcheck()
+    def test_maybe_spec(self, spec: LeafSpec(simple_only=True)):
+        v = qc.arbitrary(qc.Maybe(spec))
+        if v is not None:
+            self.assertIsInstance(v, spec)
+        return True
+    
+    @qc.quickcheck()
+    def test_list_spec(self, subspecs: qc.List(LeafSpec(simple_only=True))):
+        if len(subspecs) == 0:
+            return False
+        val = qc.arbitrary(list(subspecs))
+        for v in val:
+            assert any(isinstance(v, t) for t in subspecs)
+        return True
+    
+    @qc.quickcheck()
+    def test_tuple_spec(self, subspecs: qc.List(LeafSpec(simple_only=True))):
+        val = qc.arbitrary(tuple(subspecs))
+        self.assertEqual(len(val), len(subspecs))
+        for v, spec in zip(val, subspecs):
+            self.assertIsInstance(v, spec)
         return True
     
     @qc.quickcheck()

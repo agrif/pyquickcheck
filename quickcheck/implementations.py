@@ -5,6 +5,7 @@ from .decorator import decorator
 from .roundrobin import roundrobin
 
 import random
+import copy
 
 __all__ = ['shrink_sequence']
 
@@ -68,6 +69,27 @@ class Choice(ArbitrarySpec):
     
     def arbitrary(self):
         return random.choice(self.values)
+
+class Any(ArbitrarySpec):
+    def __init__(self, first, *specs):
+        self.specs = [first] + list(specs)
+    
+    def arbitrary(self):
+        return arbitrary(random.choice(self.specs))
+
+class Maybe(ArbitrarySpec):
+    def __init__(self, spec, none_chance=0.1):
+        self.spec = spec
+        self.none_chance = none_chance
+    
+    def arbitrary(self):
+        if random.random() < self.none_chance:
+            return None
+        return arbitrary(self.spec)
+
+@arbitrary.register(None, checker=lambda a, b: a is b)
+def arbitrary_none(_):
+    return None
 
 class Float(ArbitrarySpec):
     def __init__(self, min=None, max=None, add_sign=True, distribution=lambda: random.random()):
@@ -211,9 +233,24 @@ class List(ArbitrarySpec):
         l = arbitrary(Integer(min=0), size=size)
         return [arbitrary(self.elspec) for _ in range(l)]
 
+@arbitrary.register(list, checker=isinstance)
+def arbitrary_list(v):
+    return arbitrary(List(Any(*v)))
+
 @shrink.register(list)
 def shrink_list(v):
     return shrink_sequence(v)
+
+class Tuple(ArbitrarySpec):
+    def __init__(self, *specs):
+        self.specs = list(specs)
+    
+    def arbitrary(self):
+        return tuple(arbitrary(spec) for spec in self.specs)
+
+@arbitrary.register(tuple, checker=isinstance)
+def arbitrary_tuple(v):
+    return arbitrary(Tuple(*v))
 
 @shrink.register(tuple)
 def shrink_tuple(v):
