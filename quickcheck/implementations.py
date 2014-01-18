@@ -5,6 +5,7 @@ from .decorator import decorator
 from .roundrobin import roundrobin
 
 import random
+import math
 import copy
 
 __all__ = ['shrink_sequence']
@@ -172,7 +173,7 @@ def shrink_int(v):
     
     i = v
     while True:
-        i = i // 2
+        i = math.trunc(i / 2)
         if abs(v - i) < abs(v):
             yield v - i
         else:
@@ -226,11 +227,21 @@ class Char(ArbitrarySpec):
         return str(ret, 'utf-8')
 
 class List(ArbitrarySpec):
-    def __init__(self, elspec):
+    def __init__(self, elspec, lengthmin=0, lengthmax=None):
+        if lengthmin is None:
+            lengthmin = 0
+        if lengthmax is not None and lengthmin > lengthmax:
+            raise ValueError("length minimum is greater than length maximum")
+        if not lengthmin >= 0:
+            raise ValueError("length minimum is not greater than 0")
+        if lengthmax is not None and not lengthmax >= 0:
+            raise ValueError("length maximum is not greater than 0")
+        self.lengthmin = lengthmin
+        self.lengthmax = lengthmax
         self.elspec = elspec
     
     def arbitrary(self, size=30):
-        l = arbitrary(Integer(min=0), size=size)
+        l = arbitrary(Integer(min=self.lengthmin, max=self.lengthmax), size=size)
         return [arbitrary(self.elspec) for _ in range(l)]
 
 @arbitrary.register(list, checker=isinstance)
