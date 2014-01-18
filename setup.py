@@ -3,15 +3,12 @@
 # since this may be run under py2
 from __future__ import print_function
 
-import sys
-if sys.hexversion < 0x03020000:
-    raise RuntimeError('This package requires Python 3.2 or later.')
-
 from ez_setup import use_setuptools
 use_setuptools()
 
 from setuptools import setup, find_packages
 from subprocess import Popen, PIPE
+import sys
 import os
 
 def find_version():
@@ -42,6 +39,10 @@ def find_version():
     return "0.0-unknown"
 
 if __name__ == '__main__':
+    # put check here, because sphinx might be py2
+    if sys.hexversion < 0x03020000:
+        raise RuntimeError('This package requires Python 3.2 or later.')
+    
     # force this to run in the right directory
     os.chdir(os.path.abspath(os.path.split(__file__)[0]))
     
